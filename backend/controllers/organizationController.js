@@ -58,24 +58,14 @@ exports.getDashboard = (req, res) => {
           err ? reject(err) : resolve(row.total || 0);
         });
     }),
-    // Get actual slot counts from parking_slots table (real-time data)
+    // Get actual slot counts from parking_lots table (real-time data)
     slotCounts: new Promise((resolve, reject) => {
       db.get(
         `SELECT 
-          COUNT(*) as total_slots,
-          COUNT(CASE 
-            WHEN ps.is_available = 1 
-            AND (b.id IS NULL OR b.status NOT IN ('confirmed', 'active', 'overstay')) 
-            THEN 1 
-          END) as available_slots
-         FROM parking_slots ps
-         LEFT JOIN (
-           SELECT slot_id, id, status 
-           FROM bookings 
-           WHERE status IN ('confirmed', 'active', 'overstay')
-           AND booking_date = date('now')
-         ) b ON ps.id = b.slot_id
-         WHERE ps.organization_id = ?`,
+          COALESCE(SUM(total_slots), 0) as total_slots,
+          COALESCE(SUM(available_slots), 0) as available_slots
+         FROM parking_lots
+         WHERE organization_id = ? AND is_active = 1`,
         [organizationId],
         (err, row) => {
           err ? reject(err) : resolve(row || { total_slots: 0, available_slots: 0 });
@@ -125,7 +115,34 @@ exports.getOrganizationById = (req, res) => {
         message: 'Organization not found' 
       });
     }
-    res.json({ success: true, data: org });
+    
+    // Get actual slot counts from parking_lots table
+    db.get(
+      `SELECT 
+        COALESCE(SUM(total_slots), 0) as total_slots,
+        COALESCE(SUM(available_slots), 0) as available_slots
+       FROM parking_lots
+       WHERE organization_id = ? AND is_active = 1`,
+      [id],
+      (err, slotCounts) => {
+        if (err) {
+          console.error('Error fetching slot counts:', err);
+          return res.status(500).json({ 
+            success: false, 
+            message: 'Error fetching organization details' 
+          });
+        }
+        
+        // Update organization with real-time slot counts
+        const updatedOrg = {
+          ...org,
+          total_slots: slotCounts.total_slots || 0,
+          available_slots: slotCounts.available_slots || 0
+        };
+        
+        res.json({ success: true, data: updatedOrg });
+      }
+    );
   });
 };
 

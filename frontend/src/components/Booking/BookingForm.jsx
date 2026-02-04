@@ -111,12 +111,15 @@ const BookingForm = () => {
       try {
         const org = await organizationService.getOrganizationById(formData.organization_id);
         setSelectedOrg(org);
-        setAvailableSlots(org.available_slots || 0);
         
-        // Fetch parking lots for the organization
+        // Fetch parking lots for the organization and calculate real-time available slots
         try {
           const lotsData = await getParkingLots(formData.organization_id, false);
-          setParkingLots(lotsData.parking_lots || []);
+          const lots = lotsData.parking_lots || [];
+          setParkingLots(lots);
+          // Calculate total available slots from all active parking lots
+          const totalAvailable = lots.reduce((sum, lot) => sum + (lot.available_slots || 0), 0);
+          setAvailableSlots(totalAvailable);
         } catch (error) {
           console.error('Error fetching parking lots:', error);
           setParkingLots([]);
@@ -302,8 +305,12 @@ const BookingForm = () => {
     }
 
     try {
-      const org = await organizationService.getOrganizationById(formData.organization_id);
-      setAvailableSlots(org.available_slots || 0);
+      // Fetch parking lots to get real-time available slots
+      const lotsData = await getParkingLots(formData.organization_id, false);
+      const lots = lotsData.parking_lots || [];
+      // Calculate total available slots from all active parking lots
+      const totalAvailable = lots.reduce((sum, lot) => sum + (lot.available_slots || 0), 0);
+      setAvailableSlots(totalAvailable);
       setAvailabilityChecked(true);
       setLastCheckedTime(new Date());
     } catch (error) {

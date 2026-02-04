@@ -462,9 +462,9 @@ const OrgAdminDashboard = () => {
                     </div>
                   </div>
                   <h3 className="text-gray-500 text-sm font-medium mb-1">Total Parking Slots</h3>
-                  <p className="text-3xl font-bold text-gray-900">{organization.total_slots}</p>
+                  <p className="text-3xl font-bold text-gray-900">{dashboardData?.total_slots || 0}</p>
                   <p className="text-sm text-green-600 mt-2">
-                    Available: {organization.total_slots - activeBookings.length}
+                    Available: {dashboardData?.available_slots || 0}
                   </p>
                 </div>
 
@@ -628,7 +628,7 @@ const OrgAdminDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm opacity-90">Total Parking Slots</p>
-                      <p className="text-4xl font-bold mt-2">{organization.total_slots}</p>
+                      <p className="text-4xl font-bold mt-2">{dashboardData?.total_slots || 0}</p>
                     </div>
                     <FaParking className="text-5xl opacity-20" />
                   </div>
@@ -638,7 +638,7 @@ const OrgAdminDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm opacity-90">Available Now</p>
-                      <p className="text-4xl font-bold mt-2">{organization.total_slots - activeBookings.length}</p>
+                      <p className="text-4xl font-bold mt-2">{dashboardData?.available_slots || 0}</p>
                     </div>
                     <FaCar className="text-5xl opacity-20" />
                   </div>

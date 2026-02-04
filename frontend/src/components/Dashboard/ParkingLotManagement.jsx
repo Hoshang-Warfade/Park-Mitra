@@ -16,7 +16,9 @@ const ParkingLotManagement = ({ organizationId }) => {
   const [success, setSuccess] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingLot, setEditingLot] = useState(null);
+  const [deletingLot, setDeletingLot] = useState(null);
   const [includeInactive, setIncludeInactive] = useState(true);
 
   const [formData, setFormData] = useState({
@@ -125,17 +127,23 @@ const ParkingLotManagement = ({ organizationId }) => {
   };
 
   const handleDeleteLot = async (lotId, lotName) => {
-    if (!window.confirm(`Are you sure you want to delete "${lotName}"? This action cannot be undone.`)) {
-      return;
-    }
+    setDeletingLot({ id: lotId, name: lotName });
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingLot) return;
 
     try {
-      await deleteParkingLot(lotId);
+      await deleteParkingLot(deletingLot.id);
       setSuccess('Parking lot deleted successfully!');
       fetchParkingLots();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.message || 'Failed to delete parking lot');
+    } finally {
+      setShowDeleteModal(false);
+      setDeletingLot(null);
     }
   };
 
@@ -410,6 +418,53 @@ const ParkingLotManagement = ({ organizationId }) => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 transform transition-all">
+            <div className="text-center">
+              {/* Warning Icon */}
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+                <FaTrash className="h-8 w-8 text-red-600" />
+              </div>
+
+              {/* Title */}
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Delete Parking Lot
+              </h3>
+
+              {/* Message */}
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete <span className="font-semibold text-gray-900">"{deletingLot?.name}"</span>?
+                <br />
+                <span className="text-sm text-red-600 mt-2 block">
+                  This action cannot be undone. All slots and associated data will be permanently removed.
+                </span>
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setDeletingLot(null);
+                  }}
+                  className="flex-1 px-4 py-2.5 border-2 border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors shadow-lg hover:shadow-xl"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
         </div>

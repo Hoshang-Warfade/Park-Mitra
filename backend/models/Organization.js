@@ -231,9 +231,9 @@ class Organization {
     const ParkingLot = require('./ParkingLot');
     const lotTotals = await ParkingLot.getOrganizationTotalSlots(organization_id);
     
-    // Use parking lot totals if available, otherwise fall back to organization table
-    const total_slots = lotTotals.total_slots > 0 ? lotTotals.total_slots : org.total_slots;
-    const available_slots = lotTotals.total_slots > 0 ? lotTotals.available_slots : org.available_slots;
+    // Always use parking lot totals as the source of truth
+    const total_slots = lotTotals.total_slots;
+    const available_slots = lotTotals.available_slots;
     
     // Get total bookings count
     const totalBookingsResult = await getRow(
@@ -290,13 +290,35 @@ class Organization {
    * @returns {Array} Array of organizations
    */
   static async getAllOrganizations() {
-    return await getAllRows(
+    const organizations = await getAllRows(
       `SELECT id, org_name, admin_name, admin_email, address, 
-              total_slots, available_slots, visitor_hourly_rate, 
-              member_parking_free, created_at 
+              visitor_hourly_rate, member_parking_free, created_at, 
+              parking_rules, operating_hours
        FROM organizations 
        ORDER BY org_name ASC`
     );
+    
+    // Get slot counts from parking_lots for each organization
+    const orgsWithSlots = await Promise.all(
+      organizations.map(async (org) => {
+        const slotCounts = await getRow(
+          `SELECT 
+            COALESCE(SUM(total_slots), 0) as total_slots,
+            COALESCE(SUM(available_slots), 0) as available_slots
+           FROM parking_lots
+           WHERE organization_id = ? AND is_active = 1`,
+          [org.id]
+        );
+        
+        return {
+          ...org,
+          total_slots: slotCounts?.total_slots || 0,
+          available_slots: slotCounts?.available_slots || 0
+        };
+      })
+    );
+    
+    return orgsWithSlots;
   }
 
   // Legacy methods for backward compatibility
